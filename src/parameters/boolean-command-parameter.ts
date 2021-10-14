@@ -1,6 +1,6 @@
 import { CommandParameter, CommandParameterOptions } from "./command-parameter";
 
-export type BooleanCommandParameterOptions = {} & CommandParameterOptions;
+export type BooleanCommandParameterOptions = {} & CommandParameterOptions<boolean>;
 
 export class BooleanCommandParameter extends CommandParameter {
     constructor(name: string, shortName: string, options?: BooleanCommandParameterOptions){

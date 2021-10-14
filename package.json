@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "pack": "npm run build && npm pack",
     "test": "ts-mocha -p tsconfig.test.json src/**/*.spec.ts"
   },
   "repository": {
