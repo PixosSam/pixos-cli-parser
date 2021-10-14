@@ -15,6 +15,6 @@ export class IntCommandParameter extends NumberCommandParameter {
         super.validate(value);
 
         if(value !== null && value !== undefined && !Number.isInteger(value))
-            throw new Error(`--${this.name} must be an integer`);
+            throw new Error(this.options?.errorMessage || `--${this.name} must be an integer`);
     }
 }

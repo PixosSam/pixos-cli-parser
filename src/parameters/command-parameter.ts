@@ -1,10 +1,11 @@
-export type CommandParameterOptions = {
+export type CommandParameterOptions<T> = {
     required?: boolean
-    errorMessage?: string
+    errorMessage?: string,
+    customValidation?: (value: T | null | undefined) => {};
 };
 
 export abstract class CommandParameter {
-    constructor(public name: string, public shortName: string, public options?: CommandParameterOptions) {
+    constructor(public name: string, public shortName: string, public options?: CommandParameterOptions<any>) {
         
     }
 
@@ -24,6 +25,10 @@ export abstract class CommandParameter {
     public validate(value: any) {
         if(this.options?.required && (value === null || value === undefined)) {
             throw new Error(this.options.errorMessage || `--${this.name} is required for this command`);
+        }
+
+        if(this.options?.customValidation && !this.options.customValidation(value)) {
+            throw new Error(this.options.errorMessage || `--${this.name} is invalid`);
         }
     }
 }

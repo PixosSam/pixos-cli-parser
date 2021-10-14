@@ -1,6 +1,6 @@
 import { CommandParameter, CommandParameterOptions } from "./command-parameter";
 
-export type NumberCommandParameterOptions = {} & CommandParameterOptions;
+export type NumberCommandParameterOptions = {} & CommandParameterOptions<number>;
 
 export class NumberCommandParameter extends CommandParameter {
     constructor(name: string, shortName: string, options?: NumberCommandParameterOptions){
@@ -17,7 +17,7 @@ export class NumberCommandParameter extends CommandParameter {
             return 0;
 
         if(!num || isNaN(num))
-            throw new Error(`--${this.name} must be a number`);
+            throw new Error(this.options?.errorMessage || `--${this.name} must be a number`);
 
         return num;
     }

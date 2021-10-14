@@ -1,6 +1,6 @@
 import { describe, it } from 'mocha';
 import expect from 'expect';
-import sinon from 'sinon';
+import sinon, { assert } from 'sinon';
 import { 
     BooleanCommandParameter,
     CLI, 
@@ -348,7 +348,10 @@ describe("CLI Parameters", () => {
     it("should process an optional number parameter if it exists", () => {
         const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
             expect(command).toEqual(["test"]);
-            expect(parameters).toEqual({ "num": 23.5 });
+            if(parameters.num)
+                expect(parameters).toEqual({ "num": 23.5 });
+            else
+                expect(parameters).toEqual({});
         });
 
         const errorHandler = sinon.spy(err => {
@@ -379,13 +382,23 @@ describe("CLI Parameters", () => {
         }
 
         expect(errorHandler.called).toEqual(true);
+
+        errorHandler.called = false;
+        try{
+            cli.parse("test");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(errorHandler.called).toEqual(false);
     });
 
     it("should process an optional int parameter if it exists", () => {
         const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
             expect(command).toEqual(["test"]);
             if(parameters.num)
-                expect(parameters.num).toEqual(23);
+                expect(parameters).toEqual({ "num": 23 });
             else
                 expect(parameters).toEqual({});
         });
@@ -421,7 +434,6 @@ describe("CLI Parameters", () => {
 
         errorHandler.called = false;
         try{
-            console.log("CALLING");
             cli.parse("test");
         }
         catch(err){
@@ -431,10 +443,154 @@ describe("CLI Parameters", () => {
         expect(errorHandler.called).toEqual(false);
     });
 
-    it("should process a string parameter that passes validation");
+    it("should process a string parameter with regex validation", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            expect(command).toEqual(["test"]);
+            if(parameters.val)
+                expect(parameters).toEqual({ "val": "123" });
+            else
+                expect(parameters).toEqual({});
+        });
 
-    it("should fail with a required parameter missing");
-    it("should fail parameter validation");
-    it("should pass validation via a custom parameter validation handler");
-    it("should fail validation via a custom parameter validation handler");
+        const errorHandler = sinon.spy(err => {
+            expect(err.message).toEqual("--val must match regex /123/");
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new StringCommandParameter("val", "v", {
+                        regex: /123/
+                    })],
+                    handler: handler
+                }
+            ]
+        });
+
+        ["test --val=\"123\"", "test -v=123"].forEach(s => {
+            handler.called = false;
+            cli.parse(s);
+            expect(handler.called).toEqual(true);
+        });
+
+        try{
+            cli.parse("test --val=\"124\"");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(errorHandler.called).toEqual(true);
+    });
+
+    it("should fail with a required parameter missing", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            if(parameters.val)
+                expect(parameters).toEqual({ val: "123" });
+            else
+                assert.fail("Match handler should not have been called");
+        });
+
+        const errorHandler = sinon.spy(err => {
+            expect(err.message).toEqual("--val is required for this command");
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new StringCommandParameter("val", "v", {
+                        required: true
+                    })],
+                    handler: handler
+                }
+            ]
+        });
+
+        try{
+            cli.parse("test");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(errorHandler.called).toEqual(true);
+
+        errorHandler.called = false;
+        try{
+            cli.parse("test --val=123");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(errorHandler.called).toEqual(false);
+    });
+
+    it("should pass validation via a custom parameter validation handler", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            expect(parameters).toEqual({ val: "123" });
+        });
+
+        const errorHandler = sinon.spy(err => {
+            assert.fail("Error handler should not have been called");
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new StringCommandParameter("val", "v", {
+                        required: true,
+                        customValidation: (val) => val === "123"
+                    })],
+                    handler: handler
+                }
+            ]
+        });
+
+        try{
+            cli.parse("test --val=123");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(handler.called).toEqual(true);
+        expect(errorHandler.called).toEqual(false);
+    });
+
+    it("should fail validation via a custom parameter validation handler", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            assert.fail("Handler should not have been called");
+        });
+
+        const errorHandler = sinon.spy(err => {
+            expect(err.message).toEqual("--val is invalid");
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new StringCommandParameter("val", "v", {
+                        required: true,
+                        customValidation: (val) => val === "124"
+                    })],
+                    handler: handler
+                }
+            ]
+        });
+
+        try{
+            cli.parse("test --val=123");
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(handler.called).toEqual(false);
+        expect(errorHandler.called).toEqual(true);
+    });
 });
