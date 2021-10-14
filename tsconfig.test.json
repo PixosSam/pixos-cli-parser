@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+		"target": "es5",
+		"module": "commonjs",
+		"lib": ["ES2015"],
+		"outDir": "./build",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true
+    },
+    "include": [
+      	"src"
+    ],
+    "exclude": [
+		"node_modules",
+		"src*.spec.ts"
+    ]
+}
