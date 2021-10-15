@@ -1,10 +1,19 @@
 import { CommandParameter, CommandParameterOptions } from "./command-parameter";
 
-export type NumberCommandParameterOptions = {} & CommandParameterOptions<number>;
+export type NumberCommandParameterOptions = {
+    min: number,
+    max: number
+} & CommandParameterOptions<number>;
 
 export class NumberCommandParameter extends CommandParameter {
+
+    private min: number | null;
+    private max: number | null;
+
     constructor(name: string, shortName: string, options?: NumberCommandParameterOptions){
         super(name, shortName, options);
+        this.min = options?.min || null;
+        this.max = options?.max || null;
     }
 
     extract(parameters: { [key: string]: string }): number | null {
@@ -18,6 +27,14 @@ export class NumberCommandParameter extends CommandParameter {
 
         if(!num || isNaN(num))
             throw new Error(this.options?.errorMessage || `--${this.name} must be a number`);
+
+        if(this.min !== undefined && this.min !== null && !isNaN(this.min) && num < this.min) {
+            throw new Error(this.options?.errorMessage || `--${this.name} must be no less than ${this.min}`);
+        }
+
+        if(this.max !== undefined && this.max !== null && !isNaN(this.max) && num > this.max) {
+            throw new Error(this.options?.errorMessage || `--${this.name} must be no greater than ${this.max}`);
+        }
 
         return num;
     }

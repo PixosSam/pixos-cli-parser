@@ -81,10 +81,10 @@ describe("CLI Instance", () => {
     });
 
     it("should match longer schemas first", () => {
-        const handler = sinon.spy((command: string[]) => {
+        const handler = sinon.spy((command: any[]) => {
             expect(command).toEqual(["move", 15]);
         });
-        const secondHandler = sinon.spy((command: string[]) => {
+        const secondHandler = sinon.spy((command: any[]) => {
             expect(command).toEqual(["move", "26"]);
         });
 
@@ -113,10 +113,10 @@ describe("CLI Instance", () => {
     });
 
     it("should prioritise child cli instance when both child cli and handler provided on matching schema, but command string has remainder on match", () => {
-        const handler = sinon.spy((command: string[]) => {
+        const handler = sinon.spy((command: any[]) => {
             expect(command).toEqual(["move"]);
         });
-        const secondHandler = sinon.spy((command: string[]) => {
+        const secondHandler = sinon.spy((command: any[]) => {
             expect(command).toEqual(["move", 15.5]);
         });
         const noMatchHandler = sinon.spy((err: Error) => {});
@@ -443,6 +443,83 @@ describe("CLI Parameters", () => {
         expect(errorHandler.called).toEqual(false);
     });
 
+    it("should parse number with min/max", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            expect(command).toEqual(["test"]);
+            expect(parameters).toEqual({ "num": 23.5 });
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new NumberCommandParameter("num", "n", { min: 22, max: 24 })],
+                    handler: handler
+                }
+            ]
+        });
+
+        const errorHandler = sinon.spy(err => {
+            console.error(err);
+            assert.fail("Error handler should not have been called");
+        });
+
+        try{
+            ["test --num=\"23.5\"", "test -n=23.5"].forEach(s => {
+                handler.called = false;
+                cli.parse(s);
+                expect(handler.called).toEqual(true);
+            });
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        
+        expect(errorHandler.called).toEqual(false);
+    })
+
+    it("should fail to parse number with min/max", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            assert.fail("Handler should not have been called");
+        });
+        
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new NumberCommandParameter("num", "n", { min: 22, max: 24 })],
+                    handler: handler
+                }
+            ]
+        });
+
+        const errorHandler = sinon.spy(err => {
+            expect(err.message).toEqual("--num must be no less than 22");
+        });
+
+        const errorHandler2 = sinon.spy(err => {
+            expect(err.message).toEqual("--num must be no greater than 24");
+        });
+
+        try{
+            cli.parse("test --num=21");
+            expect(handler.called).toEqual(false);
+        }
+        catch(err){
+            errorHandler(err);
+        }
+        expect(errorHandler.called).toEqual(true);
+        
+        try{
+            cli.parse("test -n=25");
+            expect(handler.called).toEqual(false);
+        }
+        catch(err){
+            errorHandler2(err);
+        }
+        expect(errorHandler2.called).toEqual(true);
+    });
+
     it("should process a string parameter with regex validation", () => {
         const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
             expect(command).toEqual(["test"]);
@@ -592,5 +669,51 @@ describe("CLI Parameters", () => {
         
         expect(handler.called).toEqual(false);
         expect(errorHandler.called).toEqual(true);
+    });
+
+    it("should parse command array", () => {
+        const handler = sinon.spy((command: string[], parameters: { [name:string]: any }) => {
+            expect(command).toEqual(["test", "ing"]);
+            expect(parameters).toEqual({ "val": "123" });
+        });
+
+        const cli = new CLI({
+            commands: [
+                {
+                    schema: [new StringCommandEntry({ allowedValues: ["test"] })],
+                    parameters: [new StringCommandParameter("val", "v")],
+                    handler: handler
+                }
+            ]
+        });
+
+        const errorHandler = sinon.spy(err => {
+            assert.fail("Error handler should not have been called");
+        });
+
+        try{
+            cli.parse(["test", "--val=123", "ing"]);
+        }
+        catch(err){
+            errorHandler(err);
+        }
+    });
+
+    it("should fail with invalid command type", () => {
+
+        const cli = new CLI({
+            commands: []
+        });
+
+        const errorHandler = sinon.spy(err => {
+            expect(err.message).toEqual("Invalid command parameter");
+        });
+
+        try{
+            cli.parse({ "arg1": "arg1val" } as any);
+        }
+        catch(err){
+            errorHandler(err);
+        }
     });
 });

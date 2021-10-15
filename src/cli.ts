@@ -14,12 +14,23 @@ export type CLICommand = {
 
 export type CLICommandHandlerParameters = { [name:string]: any };
 
-export type CLICommandHandler = (command: string[], parameters: CLICommandHandlerParameters) => void;
+export type CLICommandHandler = (command: any[], parameters: CLICommandHandlerParameters) => void;
 
 export class CLI {
     constructor(private options: CLIOptions){}
 
-    parse(commandString: string, commandParseOptions?: { context?: { parsed: any[], remainder: string[], parentParameters: CLICommandHandlerParameters } }){
+    parse(command: string | string[], commandParseOptions?: { context?: { parsed: any[], remainder: string[], parentParameters: CLICommandHandlerParameters } }){
+        let commandString;
+        if(typeof command === "string") {
+            commandString = command;   
+        }
+        else if(typeof command === "object" && Array.isArray(command)) {
+            commandString = command.join(" ");
+        }
+        else {
+            throw new Error("Invalid command parameter");
+        }
+        
         if(!commandString)
             throw new Error("Command empty");
 
